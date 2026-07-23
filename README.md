@@ -4,14 +4,16 @@ Adzuna Gateway isolates Adzuna-specific authentication, request mapping, and
 response mapping behind the Job Seeker Copilot provider contract. In fixture
 mode it obtains synthetic responses from System Data.
 
-Status: **migration candidate; not beta-ready**. The repository cannot build
-from a clean clone because its System Data client is a local `libs/*.jar`
-dependency. Validation, resilience, licence/attribution, and test gaps are
-recorded in [`docs/BETA_READINESS_AUDIT.md`](docs/BETA_READINESS_AUDIT.md).
+Status: **migration candidate; not beta-ready**. The System Data client is now
+generated from a pinned producer contract, while validation, resilience,
+licence/attribution, and test gaps remain recorded in
+[`docs/BETA_READINESS_AUDIT.md`](docs/BETA_READINESS_AUDIT.md).
 
 ## Local verification
 
 ```bash
+./scripts/test-contract-policy.sh
+./scripts/verify-contracts.sh
 mvn -B clean verify
 docker build -t local/adzuna-gateway .
 ```
