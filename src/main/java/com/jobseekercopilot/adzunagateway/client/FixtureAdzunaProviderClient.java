@@ -88,8 +88,8 @@ public class FixtureAdzunaProviderClient implements AdzunaProviderClient {
         }
     }
 
-    private String text(String value, String fallback) {
-        return value == null ? fallback : value;
+    private String text(Object value, String fallback) {
+        return value == null ? fallback : value.toString();
     }
 
     private int number(Integer value) {
