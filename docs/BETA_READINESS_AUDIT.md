@@ -13,8 +13,6 @@
 - **P1 API safety:** the request is not validated despite validation support.
 - **P1 resilience:** a blocking WebClient call has no explicit timeout,
   deadline, rate limiter, circuit breaker, or controlled retry policy.
-- **P1 coverage:** no provider mapping, error, fixture, empty-result, or
-  contract tests were found.
 - **P1 container:** the Dockerfile now verifies and packages from source, but
   still runs as root, uses unpinned base images, and has no health check.
 
@@ -24,6 +22,12 @@
   producer revision/checksum recorded in source. Contract negative tests,
   clean Maven verification and a source-only container build pass without
   `libs`, `systemPath` or prebuilt application JARs.
+- Seven offline tests now cover representative, missing and malformed provider
+  mapping; salary, location, date and source URL fields; healthy empty results;
+  rate-limit/upstream error translation; the gateway HTTP contract; and
+  populated/empty System Data fixture mapping. The fixture tests compile
+  against the generated client and therefore detect incompatible producer
+  contract drift.
 
 ## Provider evidence
 
@@ -37,8 +41,8 @@ establish redistribution rights.
 
 Clean-clone build/container evidence; a versioned contract and drift check;
 credential rotation plus full-history scan; bounded validation; deadline,
-quota, retry and failure tests; mapping fixtures covering missing fields,
-salary units, currencies, dates and source URLs; and product-level attribution,
-retention, cache and deletion acceptance evidence.
+quota, retry and failure tests; the remaining account-country currency and
+atypical provider-format matrix tracked by ADZUNA-04/SEARCH-05; and product-level
+attribution, retention, cache and deletion acceptance evidence.
 
 This audit is not a beta-readiness approval.

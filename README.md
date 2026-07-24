@@ -5,8 +5,10 @@ response mapping behind the Job Seeker Copilot provider contract. In fixture
 mode it obtains synthetic responses from System Data.
 
 Status: **migration candidate; not beta-ready**. The System Data client is now
-generated from a pinned producer contract, while validation, resilience,
-licence/attribution, and test gaps remain recorded in
+generated from a pinned producer contract. Deterministic provider mapping,
+empty-result, error-translation, gateway-contract, and populated/empty System
+Data fixture tests run without live provider calls. Validation, resilience,
+licence/attribution, and remaining beta gaps are recorded in
 [`docs/BETA_READINESS_AUDIT.md`](docs/BETA_READINESS_AUDIT.md).
 
 Its provider-specific ownership and the boundary with canonical Job Service
@@ -21,6 +23,12 @@ results are defined in the Infrastructure
 mvn -B clean verify
 docker build -t local/adzuna-gateway .
 ```
+
+`mvn -B clean verify` currently runs seven offline tests. Synthetic provider
+HTTP responses cover representative, missing and malformed fields, salary,
+location, date, source URL, zero-result and provider-error behaviour. Generated
+System Data types are referenced directly by fixture tests, so incompatible
+producer contract changes fail compilation.
 
 Required live configuration is `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`; neither has
 a repository default. `EXTERNAL_PROVIDER_MODE=FIXTURE` is for deterministic
