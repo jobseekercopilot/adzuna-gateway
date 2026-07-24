@@ -135,7 +135,7 @@ public class AdzunaApiClient implements AdzunaProviderClient {
         job.setLongitude(decimal(node, "longitude"));
         job.setSalaryMinimum(integer(node, "salary_min"));
         job.setSalaryMaximum(integer(node, "salary_max"));
-        job.setSalaryPredicted(node.path("salary_is_predicted").isMissingNode() ? null : node.path("salary_is_predicted").asBoolean());
+        job.setSalaryPredicted(booleanValue(node, "salary_is_predicted"));
         job.setContractType(text(node, "contract_type"));
         job.setEmploymentType(text(node, "contract_time"));
         job.setCategory(text(node.path("category"), "label"));
@@ -154,6 +154,12 @@ public class AdzunaApiClient implements AdzunaProviderClient {
 
     private BigDecimal decimal(JsonNode node, String field) {
         return node.path(field).isNumber() ? node.path(field).decimalValue() : null;
+    }
+
+    private Boolean booleanValue(JsonNode node, String field) {
+        return node.path(field).isBoolean()
+                ? node.path(field).booleanValue()
+                : null;
     }
 
     private boolean blank(String value) {
