@@ -30,10 +30,13 @@ location, date, source URL, zero-result and provider-error behaviour. Generated
 System Data types are referenced directly by fixture tests, so incompatible
 producer contract changes fail compilation.
 
-Required live configuration is `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`; neither has
-a repository default. `EXTERNAL_PROVIDER_MODE=FIXTURE` is for deterministic
-non-production tests, and production must fail closed if fixture mode is
-requested.
+The safe default is `EXTERNAL_PROVIDER_MODE=FIXTURE`, which requires no live
+credential and is restricted to non-production use. Enabled `LIVE` mode
+requires both `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` before startup succeeds;
+neither has a non-empty repository default. `ADZUNA_ENABLED=false` is the
+provider kill switch. Rotation, restricted evidence, renewal, history
+verification and incident procedures are defined in
+[`docs/CREDENTIAL_OPERATIONS.md`](docs/CREDENTIAL_OPERATIONS.md).
 
 `develop` is the integration/default branch for beta hardening. See
 `CONTRIBUTING.md`, `SECURITY.md`, and the proprietary source-available

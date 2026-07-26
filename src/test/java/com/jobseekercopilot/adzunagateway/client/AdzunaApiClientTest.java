@@ -16,7 +16,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+@ExtendWith(OutputCaptureExtension.class)
 class AdzunaApiClientTest {
 
     private final AtomicInteger responseStatus = new AtomicInteger(200);
@@ -185,6 +189,57 @@ class AdzunaApiClientTest {
                 .isInstanceOf(
                         AdzunaApiClient.ProviderUnavailableException.class)
                 .hasMessage("Adzuna API request failed");
+    }
+
+    @Test
+    void rejectsMissingLiveCredentialsInsteadOfReturningNoMatches() {
+        properties.setAppId("");
+
+        assertThatThrownBy(() -> new AdzunaApiClient(properties)
+                        .search(request(null, null)))
+                .isInstanceOf(
+                        AdzunaApiClient.ProviderUnavailableException.class)
+                .hasMessage(
+                        "Adzuna live provider credentials are not configured");
+        assertThat(requestedUri.get()).isNull();
+    }
+
+    @Test
+    void explicitKillSwitchReturnsNoMatchesWithoutCredentials() {
+        properties.setEnabled(false);
+        properties.setAppId("");
+        properties.setAppKey("");
+
+        var response = new AdzunaApiClient(properties)
+                .search(request(1, 10));
+
+        assertThat(response.getTotalAvailable()).isZero();
+        assertThat(response.getJobs()).isEmpty();
+        assertThat(requestedUri.get()).isNull();
+    }
+
+    @Test
+    void upstreamFailureLogsNeverContainQueryCredentials(
+            CapturedOutput output) {
+        String privateAppId = "private-app-id-for-redaction";
+        String privateAppKey = "private-app-key-for-redaction";
+        properties.setAppId(privateAppId);
+        properties.setAppKey(privateAppKey);
+        responseStatus.set(503);
+
+        assertThatThrownBy(() -> new AdzunaApiClient(properties)
+                        .search(request(null, null)))
+                .isInstanceOf(
+                        AdzunaApiClient.ProviderUnavailableException.class)
+                .hasMessage("Adzuna API request failed");
+
+        assertThat(output)
+                .contains("status=503")
+                .doesNotContain(
+                        privateAppId,
+                        privateAppKey,
+                        "app_id=",
+                        "app_key=");
     }
 
     private AdzunaSearchRequest request(

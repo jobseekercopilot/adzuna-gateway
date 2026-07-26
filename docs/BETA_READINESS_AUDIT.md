@@ -3,13 +3,14 @@
 ## Blocking findings
 
 - **P0 credential response:** non-empty Adzuna identifiers were present in
-  current source. They have been removed from this candidate, but must be
-  revoked/rotated and the migration history must be scanned before publication.
+  earlier source. The current repository defaults to credential-free fixture
+  mode, enabled live mode fails closed when either injected value is missing,
+  and provider errors do not log exception/request representations. The
+  provider administrator must still revoke/rotate the exposed pair and retain
+  restricted evidence before publication.
 - **P0 provider compliance:** beta display, caching, quotas, deletion, salary
   attribution, and “Jobs by Adzuna” obligations have not been implemented or
   approved against the organisation's actual account.
-- **P1 correctness:** missing credentials return a successful empty result,
-  hiding configuration failure.
 - **P1 API safety:** the request is not validated despite validation support.
 - **P1 resilience:** a blocking WebClient call has no explicit timeout,
   deadline, rate limiter, circuit breaker, or controlled retry policy.
@@ -28,6 +29,12 @@
   populated/empty System Data fixture mapping. The fixture tests compile
   against the generated client and therefore detect incompatible producer
   contract drift.
+- Deterministic credential tests prove fixture mode needs no live values,
+  enabled live startup/request paths reject incomplete credentials, the
+  explicit kill switch makes no request, and upstream error logs contain
+  neither query credential nor credential-bearing URI. The repository-owned
+  rotation/incident procedure is published in
+  [`CREDENTIAL_OPERATIONS.md`](CREDENTIAL_OPERATIONS.md).
 
 ## Provider evidence
 

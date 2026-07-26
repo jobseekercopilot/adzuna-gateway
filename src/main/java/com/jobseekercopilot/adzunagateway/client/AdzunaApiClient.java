@@ -47,12 +47,13 @@ public class AdzunaApiClient implements AdzunaProviderClient {
 
     @Override
     public AdzunaSearchResponse search(AdzunaSearchRequest request) {
-        if (!properties.isEnabled() || blank(properties.getAppId()) || blank(properties.getAppKey())) {
-            log.warn("Adzuna provider disabled or credentials missing enabled={} hasAppId={} hasAppKey={}",
-                    properties.isEnabled(),
-                    !blank(properties.getAppId()),
-                    !blank(properties.getAppKey()));
+        if (!properties.isEnabled()) {
+            log.warn("Adzuna provider is disabled");
             return empty(request);
+        }
+        if (blank(properties.getAppId()) || blank(properties.getAppKey())) {
+            throw new ProviderUnavailableException(
+                    "Adzuna live provider credentials are not configured");
         }
         long startedAt = System.nanoTime();
         log.info("Adzuna provider request started targetRole={} location={} page={} resultsPerPage={}",
@@ -100,14 +101,12 @@ public class AdzunaApiClient implements AdzunaProviderClient {
             log.warn("Adzuna provider failed status={} durationMs={} error={}",
                     ex.getStatusCode().value(),
                     (System.nanoTime() - startedAt) / 1_000_000,
-                    ex.getClass().getSimpleName(),
-                    ex);
+                    ex.getClass().getSimpleName());
             throw new ProviderUnavailableException("Adzuna API request failed", ex);
         } catch (RuntimeException ex) {
             log.warn("Adzuna provider failed durationMs={} error={}",
                     (System.nanoTime() - startedAt) / 1_000_000,
-                    ex.getClass().getSimpleName(),
-                    ex);
+                    ex.getClass().getSimpleName());
             throw new ProviderUnavailableException("Adzuna API request failed", ex);
         }
     }
@@ -167,6 +166,10 @@ public class AdzunaApiClient implements AdzunaProviderClient {
     }
 
     public static class ProviderUnavailableException extends RuntimeException {
+        public ProviderUnavailableException(String message) {
+            super(message);
+        }
+
         public ProviderUnavailableException(String message, Throwable cause) {
             super(message, cause);
         }
