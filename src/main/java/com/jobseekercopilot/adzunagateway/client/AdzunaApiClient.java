@@ -60,14 +60,17 @@ public class AdzunaApiClient implements AdzunaProviderClient {
         log.info("Adzuna provider request started targetRole={} location={} page={} resultsPerPage={}",
                 request.getTargetRole(),
                 request.getLocation(),
-                request.getPage(),
-                request.getResultsPerPage());
+                requestedPage(request),
+                resultsPerPage(request));
         try {
             AdzunaSearchResponse combined = empty(request);
-            int requestedPage = request.getPage() == null ? 1 : request.getPage();
-            int resultsPerPage = request.getResultsPerPage() == null ? properties.getResultsPerPage() : request.getResultsPerPage();
+            int requestedPage = requestedPage(request);
+            int resultsPerPage = resultsPerPage(request);
+            combined.setPage(requestedPage);
             combined.setResultsPerPage(resultsPerPage);
-            for (int offset = 0; offset < Math.max(1, properties.getPagesPerSearch()); offset++) {
+            for (int offset = 0;
+                    offset < properties.getPagesPerSearch();
+                    offset++) {
                 int page = requestedPage + offset;
                 JsonNode body = webClient.get()
                         .uri(uriBuilder -> uriBuilder
@@ -124,11 +127,24 @@ public class AdzunaApiClient implements AdzunaProviderClient {
 
     private AdzunaSearchResponse empty(AdzunaSearchRequest request) {
         AdzunaSearchResponse response = new AdzunaSearchResponse();
-        response.setPage(request.getPage() == null ? 1 : request.getPage());
-        response.setResultsPerPage(request.getResultsPerPage() == null ? properties.getResultsPerPage() : request.getResultsPerPage());
+        response.setPage(requestedPage(request));
+        response.setResultsPerPage(resultsPerPage(request));
         response.setTotalAvailable(0);
         response.setJobs(new ArrayList<>());
         return response;
+    }
+
+    private int requestedPage(AdzunaSearchRequest request) {
+        return request.getPage() == null
+                ? 1
+                : Math.max(1, request.getPage());
+    }
+
+    private int resultsPerPage(AdzunaSearchRequest request) {
+        int requested = request.getResultsPerPage() == null
+                ? properties.getResultsPerPage()
+                : request.getResultsPerPage();
+        return AdzunaProperties.clampResultsPerPage(requested);
     }
 
     private AdzunaJob toJob(JsonNode node) {
