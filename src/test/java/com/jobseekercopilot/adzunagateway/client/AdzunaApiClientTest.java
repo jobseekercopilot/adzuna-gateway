@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
@@ -29,6 +31,7 @@ class AdzunaApiClientTest {
                     {"count":0,"results":[]}
                     """);
     private final AtomicReference<URI> requestedUri = new AtomicReference<>();
+    private final AtomicInteger providerRequestCount = new AtomicInteger();
     private HttpServer server;
     private AdzunaProperties properties;
 
@@ -46,7 +49,6 @@ class AdzunaApiClientTest {
         properties.setAppKey("synthetic-key");
         properties.setCountry("gb");
         properties.setResultsPerPage(25);
-        properties.setPagesPerSearch(1);
         properties.setEnabled(true);
     }
 
@@ -175,6 +177,59 @@ class AdzunaApiClientTest {
     }
 
     @Test
+    void defaultPageBudgetMakesOneOutboundProviderRequest() {
+        new AdzunaApiClient(properties).search(request(1, 10));
+
+        assertThat(providerRequestCount).hasValue(1);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "-100, 1",
+        "1, 1",
+        "2, 2",
+        "1000, 2"
+    })
+    void configuredPageBudgetBoundsOutboundProviderRequestCount(
+            int configuredPages,
+            int expectedRequests) {
+        properties.setPagesPerSearch(configuredPages);
+
+        new AdzunaApiClient(properties).search(request(1, 10));
+
+        assertThat(providerRequestCount).hasValue(expectedRequests);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "-100, 1",
+        "1, 1",
+        "50, 50",
+        "1000, 50"
+    })
+    void requestResultsPerPageNeverExceedsProviderBounds(
+            int requestedResultsPerPage,
+            int expectedResultsPerPage) {
+        var response = new AdzunaApiClient(properties)
+                .search(request(1, requestedResultsPerPage));
+
+        assertThat(response.getResultsPerPage())
+                .isEqualTo(expectedResultsPerPage);
+        assertThat(requestedUri.get().getRawQuery())
+                .contains("results_per_page=" + expectedResultsPerPage);
+    }
+
+    @Test
+    void nonPositiveProviderPageIsNormalisedToTheDocumentedFirstPage() {
+        var response = new AdzunaApiClient(properties)
+                .search(request(0, 10));
+
+        assertThat(response.getPage()).isEqualTo(1);
+        assertThat(requestedUri.get().getPath())
+                .isEqualTo("/jobs/gb/search/1");
+    }
+
+    @Test
     void translatesRateLimitAndUpstreamErrors() {
         responseStatus.set(429);
         assertThatThrownBy(() -> new AdzunaApiClient(properties)
@@ -255,6 +310,7 @@ class AdzunaApiClientTest {
     }
 
     private void respond(HttpExchange exchange) throws IOException {
+        providerRequestCount.incrementAndGet();
         requestedUri.set(exchange.getRequestURI());
         byte[] body = responseBody.get().getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set(
