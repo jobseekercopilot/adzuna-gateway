@@ -39,6 +39,7 @@ class FixtureAdzunaProviderClientTest {
                 .salaryMaximum(70000)
                 .contractType("PERMANENT")
                 .employmentType("FULL_TIME")
+                .remoteType("HYBRID")
                 .category("Technology")
                 .datePosted("2026-07-20T10:00:00Z")
                 .sourceUrl(URI.create(
@@ -80,6 +81,7 @@ class FixtureAdzunaProviderClientTest {
             assertThat(job.getLatitude()).isEqualByComparingTo("53.8008");
             assertThat(job.getSalaryMinimum()).isEqualTo(50000);
             assertThat(job.getSalaryPredicted()).isFalse();
+            assertThat(job.getRemoteType()).isEqualTo("HYBRID");
             assertThat(job.getRedirectUrl()).isEqualTo(
                     "https://fixtures.example.test/adz-fixture-1");
         });
