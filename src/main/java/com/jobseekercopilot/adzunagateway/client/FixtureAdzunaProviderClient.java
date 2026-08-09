@@ -71,6 +71,7 @@ public class FixtureAdzunaProviderClient implements AdzunaProviderClient {
         job.setSalaryPredicted(false);
         job.setContractType(source.getContractType());
         job.setEmploymentType(source.getEmploymentType());
+        job.setRemoteType(source.getRemoteType());
         job.setCategory(source.getCategory());
         job.setPostedAt(source.getDatePosted());
         job.setRedirectUrl(text(source.getSourceUrl(), "https://fixtures.jobseekercopilot.local/adzuna/" + job.getExternalJobId()));
