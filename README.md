@@ -1,5 +1,13 @@
 # Adzuna Gateway
 
+## Role in Job Seeker Copilot
+
+| Role | Called by | Calls | Data | Local port |
+|---|---|---|---|---:|
+| Adzuna provider search boundary | Job Service | Adzuna API in live mode or System Data fixtures | None | 8101 |
+
+See the central [job-search journey](https://docs.jobseekercopilot.com/journeys/job-search/), [provider integrations](https://docs.jobseekercopilot.com/services/provider-integrations/), and [configuration reference](https://docs.jobseekercopilot.com/operations/configuration/).
+
 Adzuna Gateway isolates Adzuna-specific authentication, request mapping, and
 response mapping behind the Job Seeker Copilot provider contract. In fixture
 mode it obtains synthetic responses from System Data.
