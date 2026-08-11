@@ -4,8 +4,11 @@ Adzuna Gateway isolates Adzuna-specific authentication, request mapping, and
 response mapping behind the Job Seeker Copilot provider contract. In fixture
 mode it obtains synthetic responses from System Data.
 
-Status: **migration candidate; not beta-ready**. The System Data client is now
-generated from a pinned producer contract. Deterministic provider mapping,
+Status: **implemented and composed for controlled private-beta use**. Fixture
+mode is the deterministic default and the live path has been exercised in a
+bounded manual validation; this is not a claim of provider reliability or
+production deployment approval. The System Data client is generated from a
+pinned producer contract. Deterministic provider mapping,
 empty-result, error-translation, gateway-contract, and populated/empty System
 Data fixture tests run without live provider calls. Validation, resilience,
 licence/attribution, and remaining beta gaps are recorded in
