@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class AdzunaJob {
-    private String externalJobId, title, companyName, description, locationDisplayName, contractType, employmentType, category, postedAt, redirectUrl;
+    private String externalJobId, title, companyName, description, locationDisplayName, contractType, employmentType, remoteType, category, postedAt, redirectUrl;
     private List<String> locationAreas;
     private BigDecimal latitude, longitude;
     private Integer salaryMinimum, salaryMaximum;
@@ -23,6 +23,8 @@ public class AdzunaJob {
     public void setContractType(String contractType) { this.contractType = contractType; }
     public String getEmploymentType() { return employmentType; }
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
+    public String getRemoteType() { return remoteType; }
+    public void setRemoteType(String remoteType) { this.remoteType = remoteType; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
     public String getPostedAt() { return postedAt; }

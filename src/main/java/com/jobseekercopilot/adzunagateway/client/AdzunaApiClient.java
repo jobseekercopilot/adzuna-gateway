@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -47,25 +48,29 @@ public class AdzunaApiClient implements AdzunaProviderClient {
 
     @Override
     public AdzunaSearchResponse search(AdzunaSearchRequest request) {
-        if (!properties.isEnabled() || blank(properties.getAppId()) || blank(properties.getAppKey())) {
-            log.warn("Adzuna provider disabled or credentials missing enabled={} hasAppId={} hasAppKey={}",
-                    properties.isEnabled(),
-                    !blank(properties.getAppId()),
-                    !blank(properties.getAppKey()));
+        if (!properties.isEnabled()) {
+            log.warn("Adzuna provider is disabled");
             return empty(request);
+        }
+        if (blank(properties.getAppId()) || blank(properties.getAppKey())) {
+            throw new ProviderUnavailableException(
+                    "Adzuna live provider credentials are not configured");
         }
         long startedAt = System.nanoTime();
         log.info("Adzuna provider request started targetRole={} location={} page={} resultsPerPage={}",
                 request.getTargetRole(),
                 request.getLocation(),
-                request.getPage(),
-                request.getResultsPerPage());
+                requestedPage(request),
+                resultsPerPage(request));
         try {
             AdzunaSearchResponse combined = empty(request);
-            int requestedPage = request.getPage() == null ? 1 : request.getPage();
-            int resultsPerPage = request.getResultsPerPage() == null ? properties.getResultsPerPage() : request.getResultsPerPage();
+            int requestedPage = requestedPage(request);
+            int resultsPerPage = resultsPerPage(request);
+            combined.setPage(requestedPage);
             combined.setResultsPerPage(resultsPerPage);
-            for (int offset = 0; offset < Math.max(1, properties.getPagesPerSearch()); offset++) {
+            for (int offset = 0;
+                    offset < properties.getPagesPerSearch();
+                    offset++) {
                 int page = requestedPage + offset;
                 JsonNode body = webClient.get()
                         .uri(uriBuilder -> uriBuilder
@@ -95,30 +100,51 @@ public class AdzunaApiClient implements AdzunaProviderClient {
             log.warn("Adzuna provider rate limited status={} durationMs={}",
                     ex.getStatusCode().value(),
                     (System.nanoTime() - startedAt) / 1_000_000);
-            throw new ProviderUnavailableException("Adzuna rate limit exceeded", ex);
+            throw new ProviderUnavailableException(
+                    "Adzuna rate limit exceeded",
+                    HttpStatus.TOO_MANY_REQUESTS);
         } catch (WebClientResponseException ex) {
             log.warn("Adzuna provider failed status={} durationMs={} error={}",
                     ex.getStatusCode().value(),
                     (System.nanoTime() - startedAt) / 1_000_000,
-                    ex.getClass().getSimpleName(),
-                    ex);
-            throw new ProviderUnavailableException("Adzuna API request failed", ex);
+                    ex.getClass().getSimpleName());
+            HttpStatus status = ex.getStatusCode() == HttpStatus.UNAUTHORIZED
+                    || ex.getStatusCode() == HttpStatus.FORBIDDEN
+                    ? HttpStatus.valueOf(ex.getStatusCode().value())
+                    : HttpStatus.SERVICE_UNAVAILABLE;
+            throw new ProviderUnavailableException(
+                    "Adzuna API request failed",
+                    status);
         } catch (RuntimeException ex) {
             log.warn("Adzuna provider failed durationMs={} error={}",
                     (System.nanoTime() - startedAt) / 1_000_000,
-                    ex.getClass().getSimpleName(),
-                    ex);
-            throw new ProviderUnavailableException("Adzuna API request failed", ex);
+                    ex.getClass().getSimpleName());
+            throw new ProviderUnavailableException(
+                    "Adzuna API request failed",
+                    HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
     private AdzunaSearchResponse empty(AdzunaSearchRequest request) {
         AdzunaSearchResponse response = new AdzunaSearchResponse();
-        response.setPage(request.getPage() == null ? 1 : request.getPage());
-        response.setResultsPerPage(request.getResultsPerPage() == null ? properties.getResultsPerPage() : request.getResultsPerPage());
+        response.setPage(requestedPage(request));
+        response.setResultsPerPage(resultsPerPage(request));
         response.setTotalAvailable(0);
         response.setJobs(new ArrayList<>());
         return response;
+    }
+
+    private int requestedPage(AdzunaSearchRequest request) {
+        return request.getPage() == null
+                ? 1
+                : Math.max(1, request.getPage());
+    }
+
+    private int resultsPerPage(AdzunaSearchRequest request) {
+        int requested = request.getResultsPerPage() == null
+                ? properties.getResultsPerPage()
+                : request.getResultsPerPage();
+        return AdzunaProperties.clampResultsPerPage(requested);
     }
 
     private AdzunaJob toJob(JsonNode node) {
@@ -135,7 +161,7 @@ public class AdzunaApiClient implements AdzunaProviderClient {
         job.setLongitude(decimal(node, "longitude"));
         job.setSalaryMinimum(integer(node, "salary_min"));
         job.setSalaryMaximum(integer(node, "salary_max"));
-        job.setSalaryPredicted(node.path("salary_is_predicted").isMissingNode() ? null : node.path("salary_is_predicted").asBoolean());
+        job.setSalaryPredicted(booleanValue(node, "salary_is_predicted"));
         job.setContractType(text(node, "contract_type"));
         job.setEmploymentType(text(node, "contract_time"));
         job.setCategory(text(node.path("category"), "label"));
@@ -156,13 +182,32 @@ public class AdzunaApiClient implements AdzunaProviderClient {
         return node.path(field).isNumber() ? node.path(field).decimalValue() : null;
     }
 
+    private Boolean booleanValue(JsonNode node, String field) {
+        return node.path(field).isBoolean()
+                ? node.path(field).booleanValue()
+                : null;
+    }
+
     private boolean blank(String value) {
         return value == null || value.isBlank();
     }
 
     public static class ProviderUnavailableException extends RuntimeException {
-        public ProviderUnavailableException(String message, Throwable cause) {
-            super(message, cause);
+        private final HttpStatus status;
+
+        public ProviderUnavailableException(String message) {
+            this(message, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+
+        public ProviderUnavailableException(
+                String message,
+                HttpStatus status) {
+            super(message, null, false, false);
+            this.status = status;
+        }
+
+        public HttpStatus getStatus() {
+            return status;
         }
     }
 }
